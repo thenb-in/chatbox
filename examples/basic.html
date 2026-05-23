@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>@nt/chatbox — basic example</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Font Awesome 4 for the icons used inside the widget -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../src/chatbox.css">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 720px;
+      margin: 48px auto;
+      padding: 0 24px;
+      color: #0f172a;
+    }
+    pre {
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    button.demo {
+      background: #2f5597;
+      color: #fff;
+      border: 0;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    /* Optional: theme override demo */
+    :root {
+      --cb-primary:       #4f46e5;
+      --cb-primary-hover: #4338ca;
+      --cb-accent:        #facc15;
+    }
+  </style>
+</head>
+<body>
+  <h1>@nt/chatbox — basic example</h1>
+  <p>
+    The chatbox is mounted in the bottom-right. It auto-expands a few seconds
+    after page load. Click <button class="demo" onclick="Chatbox.openFocused()">Open focused</button>
+    to launch as a centered modal.
+  </p>
+
+  <pre>Chatbox.init({
+  brand: { name: 'Acme Co', avatarText: 'AC', tagline: 'We reply in ~5 min' },
+  steps: ['phone', 'interests', 'mail', 'name'],
+  interests: [
+    { key: 'sales',   label: 'Sales enquiry' },
+    { key: 'support', label: 'Support' },
+    { key: 'partner', label: 'Partnership' }
+  ],
+  whatsappNumber: '15555550100',
+  autoExpandDelayMs: 4000,
+  onSubmit: function (stage, payload) {
+    console.log('chatbox submit', stage.stageName, payload.data);
+  },
+  onEvent: function (name, payload) {
+    console.log('chatbox event', name, payload);
+  }
+});</pre>
+
+  <script src="../src/chatbox.js"></script>
+  <script>
+    Chatbox.init({
+      brand: { name: 'Acme Co', avatarText: 'AC', tagline: 'We reply in ~5 min' },
+      steps: ['phone', 'interests', 'mail', 'name'],
+      interests: [
+        { key: 'sales',   label: 'Sales enquiry' },
+        { key: 'support', label: 'Support' },
+        { key: 'partner', label: 'Partnership' }
+      ],
+      whatsappNumber: '15555550100',
+      autoExpandDelayMs: 4000,
+      autoExpandBlockedPaths: null, // demo: never block
+      bookDemoHrefPattern: null,    // demo: don't intercept any links
+      onSubmit: function (stage, payload) {
+        console.log('chatbox submit', stage.stageName, payload.data);
+      },
+      onEvent: function (name, payload) {
+        console.log('chatbox event', name, payload);
+      }
+    });
+  </script>
+</body>
+</html>

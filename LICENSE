@@ -1,0 +1,124 @@
+Proprietary Software License — Named-Affiliate Use
+Copyright (c) 2026 Navlakha Technologies. All rights reserved.
+
+This software and its source code (the "Software") are the confidential and
+proprietary property of Navlakha Technologies ("Licensor"). The Software is
+licensed, not sold.
+
+1. Definitions
+   "Authorized Entity" means any legal entity, product, or property
+   expressly listed by name in Schedule A of this license. The list in
+   Schedule A is exhaustive and closed. No entity is an Authorized Entity
+   by virtue of common ownership, control, branding, partnership, or any
+   other relationship with the Licensor unless it is named in Schedule A.
+
+   "Authorized Personnel" means natural persons who are employees,
+   officers, or directly-engaged contractors of an Authorized Entity,
+   acting in that capacity and on the business of that Authorized Entity.
+
+   "Internal Use" means use of the Software in or on properties operated
+   by an Authorized Entity for the benefit of that Authorized Entity's
+   own business. It does NOT include use on behalf of, for the benefit
+   of, or as a service to any third party that is not itself an
+   Authorized Entity.
+
+2. Grant to Authorized Entities
+   Subject to continuous compliance with this license, the Licensor grants
+   each Authorized Entity a non-exclusive, non-transferable, non-
+   sublicensable, royalty-free, revocable license to:
+     (a) use and run the Software for Internal Use;
+     (b) copy the Software solely as required for Internal Use,
+         development, backup, and disaster recovery;
+     (c) modify the Software and create derivative works, provided that
+         such modifications and derivative works are themselves subject
+         to this license and remain the property of the Licensor (see
+         Section 5); and
+     (d) permit Authorized Personnel to exercise the rights in (a)–(c) on
+         behalf of the Authorized Entity.
+
+   No other rights are granted. Any use outside Internal Use — including
+   embedding the Software in a product offered to, distributed to, or
+   operated for any non-Authorized Entity — is prohibited unless the
+   recipient is itself added to Schedule A by written amendment signed by
+   the Licensor.
+
+3. Restrictions (apply to everyone, including Authorized Entities)
+   You may NOT:
+     (a) distribute, publish, sublicense, sell, rent, lease, lend, or
+         otherwise transfer the Software or access to it to any party
+         other than an Authorized Entity or its Authorized Personnel;
+     (b) remove, alter, or obscure any copyright, trademark, or other
+         proprietary notice in the Software;
+     (c) use the Licensor's or any Authorized Entity's name, logo, or
+         trademarks except as strictly required to identify the Software;
+     (d) reverse engineer, decompile, or disassemble the Software, except
+         to the extent that such activity is expressly permitted by
+         applicable law notwithstanding this limitation; or
+     (e) use the Software in any manner that violates applicable law.
+
+   Any party who is not an Authorized Entity has no license to use, copy,
+   modify, run, or distribute the Software for any purpose. Mere
+   possession of a copy does not grant any rights.
+
+4. Reservation of Rights
+   All rights not expressly granted in Section 2 are reserved by the
+   Licensor. The Licensor may revoke, modify, or amend the grant — and
+   the contents of Schedule A — at its sole discretion, with or without
+   notice. Removal of an entity from Schedule A terminates that entity's
+   license immediately.
+
+5. Ownership of Modifications
+   Any modification, derivative work, configuration, or extension of the
+   Software made by or on behalf of an Authorized Entity is owned by the
+   Licensor and is itself part of the Software for purposes of this
+   license. Authorized Entities hereby assign all such rights to the
+   Licensor and agree to execute any documents reasonably necessary to
+   perfect such assignment.
+
+6. Confidentiality
+   The Software, including its source code and any non-public
+   documentation, is confidential information of the Licensor. Authorized
+   Entities shall protect it using at least the same degree of care they
+   use to protect their own confidential information of like importance,
+   and in no event less than a reasonable degree of care.
+
+7. No Warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+   NON-INFRINGEMENT.
+
+8. Limitation of Liability
+   IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE,
+   ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+   OTHER DEALINGS IN THE SOFTWARE.
+
+9. Termination
+   This license terminates automatically and immediately upon any breach
+   of these terms, upon removal of the relevant entity from Schedule A,
+   or upon written notice from the Licensor. Upon termination, the
+   affected party must cease all use of the Software and destroy all
+   copies in its possession or control. Sections 3, 4, 5, 6, 7, 8, and 10
+   survive termination.
+
+10. Governing Law
+    This license is governed by the laws of the jurisdiction in which the
+    Licensor is established, without regard to its conflict-of-laws rules.
+
+For licensing inquiries, contact: support@navlakha.tech
+
+────────────────────────────────────────────────────────────────────────
+Schedule A — Authorized Entities
+
+The following entities (and only the following entities) are Authorized
+Entities under Section 1 of this license:
+
+  1. Navlakha Technologies
+
+  [To add an Authorized Entity, replace this line with the entity's full
+   legal name and the date of addition. Schedule A may only be amended by
+   the Licensor.]
+
+Last updated: 2026-05-23
+────────────────────────────────────────────────────────────────────────

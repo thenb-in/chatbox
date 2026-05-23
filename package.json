@@ -1,0 +1,15 @@
+{
+  "name": "@nt/chatbox",
+  "version": "1.0.0",
+  "description": "Embeddable lead-capture chatbox widget. Configurable, themable, with pluggable adapters for profile persistence, validators, mailing, and analytics.",
+  "main": "src/chatbox.js",
+  "style": "src/chatbox.css",
+  "files": [
+    "src/",
+    "README.md"
+  ],
+  "keywords": ["chatbox", "chatbot", "lead-capture", "widget"],
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "author": "Navlakha Technologies <support@navlakha.tech>"
+}

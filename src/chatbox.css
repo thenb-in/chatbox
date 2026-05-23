@@ -73,9 +73,22 @@
   justify-content: center;
   flex-shrink: 0;
 }
-.nt-chat-launcher-ico i {
-  font-size: 15px;
+
+.nt-chat-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+  font-style: normal;
+}
+.nt-chat-ico svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+  fill: currentColor;
+}
+.nt-chat-launcher-ico .nt-chat-ico {
+  font-size: 15px;
   color: #ffffff;
 }
 
@@ -518,7 +531,7 @@
     gap: 9px;
   }
   .nt-chat-launcher-ico { width: 26px; height: 26px; }
-  .nt-chat-launcher-ico i { font-size: 13px; }
+  .nt-chat-launcher-ico .nt-chat-ico { font-size: 13px; }
   .nt-chat-launcher-title { font-size: 13px; }
   .nt-chat-launcher-sub   { font-size: 10.5px; }
 
@@ -540,6 +553,5 @@
     height: 44px !important;
     display: flex !important;
   }
-  .nt-wa-btn .fa-whatsapp { font-size: 21px !important; }
   .nt-wa-btn .nt-wa-tooltip { display: none; }
 }

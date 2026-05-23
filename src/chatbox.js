@@ -211,6 +211,31 @@
   }
 
   /* =================================================================== *
+   *  Icon glyphs (Unicode / emoji — no Font Awesome dependency).
+   * =================================================================== */
+
+  var ICONS = {
+    comments:      '💬',
+    refresh:       '↻',
+    expand:        '⤢',
+    compress:      '⤡',
+    'paper-plane': '✈',
+    check:         '✓',
+    whatsapp:
+      '<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>' +
+      '</svg>'
+  };
+
+  function icon(name) {
+    var glyph = ICONS[name] || '';
+    var isSvg = glyph.charAt(0) === '<';
+    var attrs = { class: 'nt-chat-ico', 'aria-hidden': 'true' };
+    if (isSvg) attrs.html = glyph;
+    return el('span', attrs, isSvg ? null : glyph);
+  }
+
+  /* =================================================================== *
    *  Main factory — produces an isolated instance bound to its config.
    * =================================================================== */
 
@@ -350,7 +375,7 @@
         onclick: function () { open({ focused: false }); }
       }, [
         el('span', { class: 'nt-chat-launcher-ico', 'aria-hidden': 'true' }, [
-          el('i', { class: 'fa fa-comments' })
+          icon('comments')
         ]),
         el('span', { class: 'nt-chat-launcher-text' }, [
           el('span', { class: 'nt-chat-launcher-title' }, cfg.brand.launcherTitle),
@@ -395,8 +420,8 @@
       dom.panel.classList.toggle('is-focused', state.focused);
       if (state.focused) mountBackdrop(); else unmountBackdrop();
       if (dom.focusBtn) {
-        var ico = dom.focusBtn.querySelector('i');
-        if (ico) ico.className = 'fa ' + (state.focused ? 'fa-compress' : 'fa-expand');
+        var ico = dom.focusBtn.querySelector('.nt-chat-ico');
+        if (ico) ico.textContent = ICONS[state.focused ? 'compress' : 'expand'] || '';
         var label = state.focused ? 'Dock to corner' : 'Focus mode';
         dom.focusBtn.setAttribute('aria-label', label);
         dom.focusBtn.setAttribute('title',      label);
@@ -483,13 +508,13 @@
             class: 'nt-chat-head-btn', type: 'button',
             'aria-label': 'Start over', title: 'Start over',
             onclick: stopAndCall(askReset)
-          }, [el('i', { class: 'fa fa-refresh', 'aria-hidden': 'true' })]),
+          }, [icon('refresh')]),
           (dom.focusBtn = el('button', {
             class: 'nt-chat-head-btn', type: 'button',
             'aria-label': state.focused ? 'Dock to corner' : 'Focus mode',
             title:        state.focused ? 'Dock to corner' : 'Focus mode',
             onclick: stopAndCall(toggleFocused)
-          }, [el('i', { class: 'fa ' + (state.focused ? 'fa-compress' : 'fa-expand'), 'aria-hidden': 'true' })])),
+          }, [icon(state.focused ? 'compress' : 'expand')])),
           el('button', {
             class: 'nt-chat-head-btn close', type: 'button',
             'aria-label': 'Close chat', onclick: stopAndCall(close)
@@ -608,7 +633,7 @@
 
       var sendBtn = el('button', {
         class: 'nt-chat-send', type: 'button', onclick: submit
-      }, [el('i', { class: 'fa fa-paper-plane', 'aria-hidden': 'true' }), ' Send']);
+      }, [icon('paper-plane'), ' Send']);
 
       dom.foot.appendChild(el('div', { class: 'nt-chat-input-row' }, [dialEl, input, sendBtn]));
       dom.foot.appendChild(errBox);
@@ -786,7 +811,7 @@
 
       var sendBtn = el('button', {
         class: 'nt-chat-send', type: 'button', onclick: submitManual
-      }, [el('i', { class: 'fa fa-paper-plane', 'aria-hidden': 'true' }), ' Send']);
+      }, [icon('paper-plane'), ' Send']);
 
       dom.foot.appendChild(el('div', { class: 'nt-chat-input-row' }, [input, sendBtn]));
       dom.foot.appendChild(errBox);
@@ -826,7 +851,7 @@
 
       var send = el('button', {
         class: 'nt-chat-send', type: 'button', onclick: submit
-      }, [el('i', { class: 'fa fa-paper-plane', 'aria-hidden': 'true' }), ' Send']);
+      }, [icon('paper-plane'), ' Send']);
 
       var skip = el('button', {
         class: 'nt-chat-skip', type: 'button',
@@ -858,7 +883,7 @@
       input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
 
       var btn = el('button', { class: 'nt-chat-send', type: 'button', onclick: submit },
-        [el('i', { class: 'fa fa-paper-plane', 'aria-hidden': 'true' }), ' Send']);
+        [icon('paper-plane'), ' Send']);
 
       dom.foot.appendChild(el('div', { class: 'nt-chat-input-row' }, [input, btn]));
       setTimeout(function () { input.focus(); }, 60);
@@ -902,7 +927,7 @@
         return "We have your verified email (" + state.data.email + "). Sign in again to update, or just type a different one.";
       if (state.data.email)
         return "Drop your email below" + (googleEnabled() ? ", or sign in with Google for a verified address." : ".");
-      return "What's the best email for you?" + (googleEnabled() ? " Type it in, or sign in with Google for one-tap verified delivery." : "");
+      return "Your email?" + (googleEnabled() ? " Type it in, or sign in with Google for one-tap verified delivery." : "");
     }
     function namePrompt() {
       var existing = (state.data.name || '').split(' ')[0];
@@ -941,7 +966,7 @@
       } else if (hasEmail) {
         msgs.push("Share your phone or WhatsApp number" + (googleEnabled() ? ", verify via Google" : "") + ", or skip — we already have your email.");
       } else if (p && p.phone) {
-        msgs.push("Confirm the phone number we have" + (googleEnabled() ? ", or sign in with Google to add your email." : "."));
+        msgs.push("Confirm your phone number" + (googleEnabled() ? ", or sign in with Google to add your email." : "."));
       } else {
         msgs.push("Share your phone or WhatsApp number" + (googleEnabled() ? ", or sign in with Google to get started." : " to get started."));
       }
@@ -974,7 +999,7 @@
       });
 
       var box = el('div', { class: 'nt-chat-success' }, [
-        el('div', { class: 'nt-chat-success-ico' }, [el('i', { class: 'fa fa-check' })]),
+        el('div', { class: 'nt-chat-success-ico' }, [icon('check')]),
         el('h4', null, greeting + " We've got your details."),
         el('p',  null, "Our team will reach out within one business day." + (WA_NUMBER ? ' Want to chat now?' : ''))
       ]);
@@ -983,7 +1008,7 @@
           class: 'wa', href: waLink(state.data),
           target: '_blank', rel: 'noopener noreferrer',
           'data-cta-type': 'whatsapp', 'data-cta-location': 'chatbot'
-        }, [el('i', { class: 'fa fa-whatsapp' }), 'WhatsApp us now']));
+        }, [icon('whatsapp'), 'WhatsApp now']));
       }
       dom.body.appendChild(box);
       scrollBodyToBottom();

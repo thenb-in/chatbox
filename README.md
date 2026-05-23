@@ -8,14 +8,37 @@ Originally extracted from the [Navlakha Technologies landing page](../landing-pa
 
 ## Install
 
-Copy `src/chatbox.js` + `src/chatbox.css` into your site, or symlink the folder:
+### Option A — CDN (recommended for NT sites)
+
+Load directly from jsDelivr, pinned to a release tag:
+
+```html
+<link  rel="stylesheet" href="https://cdn.jsdelivr.net/gh/thenb-in/chatbox@v1.0.0/src/chatbox.css">
+<script src="https://cdn.jsdelivr.net/gh/thenb-in/chatbox@v1.0.0/src/chatbox.js"></script>
+```
+
+Pin formats:
+- `@v1.0.0` — exact version (safest for prod)
+- `@v1`     — latest 1.x patch (auto-picks up `v1.0.1`, `v1.1.0`, …)
+- `@latest` — head of `main` (do **not** use in prod — a bad commit breaks every site)
+
+To force-refresh a moving pointer like `@v1` after a release:
+`https://purge.jsdelivr.net/gh/thenb-in/chatbox@v1/src/chatbox.js`
+
+### Option B — Self-host
+
+Copy `src/chatbox.js` + `src/chatbox.css` onto your own CDN/server and reference them however you serve other static assets.
+
+### Option C — Symlink / local copy (in-repo)
 
 ```html
 <link  rel="stylesheet" href="/path/to/chatbox/src/chatbox.css">
 <script src="/path/to/chatbox/src/chatbox.js"></script>
 ```
 
-The script also exposes `module.exports` for CommonJS environments. It only touches the DOM once `Chatbox.init()` is called.
+---
+
+The script exposes `module.exports` for CommonJS environments. It only touches the DOM once `Chatbox.init()` is called.
 
 Icons (`fa-comments`, `fa-paper-plane`, etc.) come from [Font Awesome 4](https://fontawesome.com/v4/icons/) — load it on the host page. If you don't, the chat still works; you just lose the glyphs.
 

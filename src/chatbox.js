@@ -96,9 +96,24 @@
    *  Built-in fallback validators (used if config.validators absent)
    * =================================================================== */
 
+  // If libphonenumber-js is loaded on the page (window.libphonenumber, exposes
+  // isValidPhoneNumber + parsePhoneNumberFromString), the default phone
+  // validator uses it for country-aware length/prefix checks. Otherwise it
+  // falls back to a permissive 7–15 digit count.
   var DEFAULT_VALIDATORS = {
     isValidPhoneDigits: function (input, dialCode) {
-      var digits = String(input || '').replace(/\D/g, '');
+      var raw  = String(input || '').trim();
+      var dial = String(dialCode || '').trim();
+      if (!raw) return false;
+
+      var lpn = (typeof window !== 'undefined') ? window.libphonenumber : null;
+      if (lpn && typeof lpn.isValidPhoneNumber === 'function') {
+        var e164 = (raw.charAt(0) === '+') ? raw
+                 : (dial ? (dial + ' ' + raw) : raw);
+        try { return lpn.isValidPhoneNumber(e164); } catch (e) { /* fall through */ }
+      }
+
+      var digits = raw.replace(/\D/g, '');
       return digits.length >= 7 && digits.length <= 15;
     },
     isValidEmail: function (input) {

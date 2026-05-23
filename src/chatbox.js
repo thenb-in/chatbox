@@ -36,6 +36,438 @@
   if (global.Chatbox && global.Chatbox.__loaded) return;
 
   /* =================================================================== *
+   *  Built-in IPLocation (formerly served as a sibling `ip-location.js`).
+   *
+   *  Fires one passive IP/geo lookup per visitor lifetime and exposes a
+   *  synchronous snapshot + dial-code lookup on window.NTIPLocation. If a
+   *  host has already loaded the standalone module, we don't overwrite.
+   *  Other consumers on the page (e.g. NT's forms.js) read the same global.
+   * =================================================================== */
+
+  (function () {
+    if (global.NTIPLocation) return;
+
+    var REFRESH_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+    function getStored() {
+      if (!global.NTVisitorProfile || !global.NTVisitorProfile.get) return null;
+      var p = global.NTVisitorProfile.get();
+      return (p && p.ip_location) || null;
+    }
+    function needsRefresh(stored) {
+      if (!stored || !stored.fetched_at) return true;
+      return Date.now() - stored.fetched_at > REFRESH_AFTER_MS;
+    }
+    function normaliseIpwho(d) {
+      if (!d || d.success === false || !d.ip) return null;
+      return {
+        ip: d.ip, ip_type: d.type || null,
+        city: d.city || null, region: d.region || null,
+        country: d.country || null, country_code: d.country_code || null,
+        postal: d.postal || null,
+        latitude:  d.latitude  != null ? d.latitude  : null,
+        longitude: d.longitude != null ? d.longitude : null,
+        timezone: (d.timezone && d.timezone.id) || null,
+        isp: (d.connection && (d.connection.isp || d.connection.org)) || null,
+        asn: (d.connection && d.connection.asn) || null,
+        source: 'ipwho.is', fetched_at: Date.now()
+      };
+    }
+    function fetchIpwho() {
+      return fetch('https://ipwho.is/', { method: 'GET', mode: 'cors', credentials: 'omit' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(normaliseIpwho);
+    }
+    function fetchIpifyFallback() {
+      return fetch('https://api.ipify.org?format=json', { method: 'GET', mode: 'cors', credentials: 'omit' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.ip) return null;
+          return {
+            ip: d.ip, ip_type: null,
+            city: null, region: null, country: null, country_code: null, postal: null,
+            latitude: null, longitude: null, timezone: null, isp: null, asn: null,
+            source: 'ipify.org', fetched_at: Date.now()
+          };
+        });
+    }
+    function persist(data) {
+      if (!data) return;
+      if (global.NTVisitorProfile && global.NTVisitorProfile.setIPLocation) {
+        global.NTVisitorProfile.setIPLocation(data);
+      }
+    }
+    // Skip the IP fetch on hosts without NTVisitorProfile (no persistence
+    // layer to write into). The dial-picker + getCountryCode are still
+    // usable — they just won't auto-prefill the visitor's country.
+    function boot(attemptsLeft) {
+      if (typeof attemptsLeft !== 'number') attemptsLeft = 20;
+      if (!global.NTVisitorProfile) {
+        if (attemptsLeft <= 0) return;
+        return setTimeout(function () { boot(attemptsLeft - 1); }, 50);
+      }
+      var stored = getStored();
+      if (!needsRefresh(stored)) return;
+      fetchIpwho()
+        .catch(function () { return null; })
+        .then(function (data) { return data || fetchIpifyFallback().catch(function () { return null; }); })
+        .then(persist);
+    }
+
+    var DIAL_CODES = {
+      AF:'+93', AL:'+355', DZ:'+213', AS:'+1684', AD:'+376', AO:'+244', AI:'+1264', AG:'+1268',
+      AR:'+54', AM:'+374', AW:'+297', AU:'+61', AT:'+43', AZ:'+994',
+      BS:'+1242', BH:'+973', BD:'+880', BB:'+1246', BY:'+375', BE:'+32', BZ:'+501', BJ:'+229',
+      BM:'+1441', BT:'+975', BO:'+591', BA:'+387', BW:'+267', BR:'+55', IO:'+246', VG:'+1284',
+      BN:'+673', BG:'+359', BF:'+226', BI:'+257',
+      KH:'+855', CM:'+237', CA:'+1', CV:'+238', KY:'+1345', CF:'+236', TD:'+235', CL:'+56',
+      CN:'+86', CX:'+61', CC:'+61', CO:'+57', KM:'+269', CK:'+682', CR:'+506', HR:'+385',
+      CU:'+53', CW:'+599', CY:'+357', CZ:'+420', CD:'+243',
+      DK:'+45', DJ:'+253', DM:'+1767', DO:'+1809',
+      EC:'+593', EG:'+20', SV:'+503', GQ:'+240', ER:'+291', EE:'+372', SZ:'+268', ET:'+251',
+      FK:'+500', FO:'+298', FJ:'+679', FI:'+358', FR:'+33', GF:'+594', PF:'+689',
+      GA:'+241', GM:'+220', GE:'+995', DE:'+49', GH:'+233', GI:'+350', GR:'+30', GL:'+299',
+      GD:'+1473', GP:'+590', GU:'+1671', GT:'+502', GG:'+44', GN:'+224', GW:'+245', GY:'+592',
+      HT:'+509', HN:'+504', HK:'+852', HU:'+36',
+      IS:'+354', IN:'+91', ID:'+62', IR:'+98', IQ:'+964', IE:'+353', IM:'+44', IL:'+972', IT:'+39', CI:'+225',
+      JM:'+1876', JP:'+81', JE:'+44', JO:'+962',
+      KZ:'+7', KE:'+254', KI:'+686', XK:'+383', KW:'+965', KG:'+996',
+      LA:'+856', LV:'+371', LB:'+961', LS:'+266', LR:'+231', LY:'+218', LI:'+423', LT:'+370', LU:'+352',
+      MO:'+853', MG:'+261', MW:'+265', MY:'+60', MV:'+960', ML:'+223', MT:'+356', MH:'+692', MQ:'+596',
+      MR:'+222', MU:'+230', YT:'+262', MX:'+52', FM:'+691', MD:'+373', MC:'+377', MN:'+976', ME:'+382',
+      MS:'+1664', MA:'+212', MZ:'+258', MM:'+95',
+      NA:'+264', NR:'+674', NP:'+977', NL:'+31', NC:'+687', NZ:'+64', NI:'+505', NE:'+227', NG:'+234',
+      NU:'+683', NF:'+672', KP:'+850', MK:'+389', MP:'+1670', NO:'+47',
+      OM:'+968',
+      PK:'+92', PW:'+680', PS:'+970', PA:'+507', PG:'+675', PY:'+595', PE:'+51', PH:'+63', PN:'+64',
+      PL:'+48', PT:'+351', PR:'+1787',
+      QA:'+974',
+      CG:'+242', RE:'+262', RO:'+40', RU:'+7', RW:'+250',
+      BL:'+590', SH:'+290', KN:'+1869', LC:'+1758', MF:'+590', PM:'+508', VC:'+1784',
+      WS:'+685', SM:'+378', ST:'+239', SA:'+966', SN:'+221', RS:'+381', SC:'+248', SL:'+232',
+      SG:'+65', SX:'+1721', SK:'+421', SI:'+386', SB:'+677', SO:'+252', ZA:'+27', KR:'+82', SS:'+211',
+      ES:'+34', LK:'+94', SD:'+249', SR:'+597', SJ:'+47', SE:'+46', CH:'+41', SY:'+963',
+      TW:'+886', TJ:'+992', TZ:'+255', TH:'+66', TL:'+670', TG:'+228', TK:'+690', TO:'+676',
+      TT:'+1868', TN:'+216', TR:'+90', TM:'+993', TC:'+1649', TV:'+688',
+      UG:'+256', UA:'+380', AE:'+971', GB:'+44', US:'+1', UY:'+598', UZ:'+998',
+      VU:'+678', VA:'+39', VE:'+58', VN:'+84', VI:'+1340',
+      WF:'+681', YE:'+967', ZM:'+260', ZW:'+263'
+    };
+
+    function getDialCode() {
+      var loc = getStored();
+      if (!loc || !loc.country_code) return null;
+      return DIAL_CODES[String(loc.country_code).toUpperCase()] || null;
+    }
+
+    var _allDialCodes = null;
+    function getAllDialCodes() {
+      if (_allDialCodes) return _allDialCodes;
+      var names = null;
+      try {
+        if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+          names = new Intl.DisplayNames(['en'], { type: 'region' });
+        }
+      } catch (e) { names = null; }
+      var list = Object.keys(DIAL_CODES).map(function (iso) {
+        var name = iso;
+        if (names) { try { name = names.of(iso) || iso; } catch (e) {} }
+        return { iso: iso, dial: DIAL_CODES[iso], name: name };
+      });
+      list.sort(function (a, b) { return a.name.localeCompare(b.name); });
+      _allDialCodes = list;
+      return list;
+    }
+
+    global.NTIPLocation = {
+      get: getStored,
+      getDialCode: getDialCode,
+      getCountryCode: function () {
+        var loc = getStored();
+        return (loc && loc.country_code) ? String(loc.country_code).toUpperCase() : null;
+      },
+      getAllDialCodes: getAllDialCodes,
+      refresh: function () {
+        fetchIpwho()
+          .catch(function () { return fetchIpifyFallback().catch(function () { return null; }); })
+          .then(persist);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { boot(); });
+    } else {
+      boot();
+    }
+  })();
+
+  /* =================================================================== *
+   *  Built-in DialPicker (formerly served as a sibling `dial-picker.js`).
+   *
+   *  Compact searchable country-dial-code popover. Depends on
+   *  window.NTIPLocation above for the country list. Exposes window.NTDialPicker
+   *  for other consumers (e.g. forms.js) — host overwrites are respected.
+   * =================================================================== */
+
+  (function () {
+    if (global.NTDialPicker) return;
+
+    var STYLE_ID = 'nt-dial-picker-styles';
+    var CSS = [
+      '.nt-dial-picker{position:relative;display:inline-flex;flex:0 0 auto;}',
+      '.nt-dial-picker-btn{display:inline-flex;align-items:center;gap:6px;',
+        'padding:10px 10px;border:1.5px solid #e2e8f0;border-radius:10px;',
+        'background:#fff;font-family:inherit;font-size:14px;color:#0f172a;',
+        'cursor:pointer;line-height:1.2;transition:border-color .15s ease;',
+        'min-width:74px;justify-content:center;}',
+      '.nt-dial-picker-btn:hover{border-color:#cbd5e1;}',
+      '.nt-dial-picker-btn[aria-expanded="true"]{border-color:#2f5597;}',
+      '.nt-dial-picker-val{font-weight:600;letter-spacing:.2px;}',
+      '.nt-dial-picker-caret{color:#64748b;font-size:10px;line-height:1;}',
+      '.nt-dial-picker-pop{position:fixed;z-index:1000000;background:#fff;',
+        'border:1px solid #e2e8f0;border-radius:10px;',
+        'box-shadow:0 12px 32px rgba(15,23,42,.18);width:280px;max-width:92vw;',
+        'max-height:320px;display:flex;flex-direction:column;overflow:hidden;',
+        'font-family:inherit;}',
+      '.nt-dial-picker-pop[hidden]{display:none;}',
+      '.nt-dial-picker-search{border:none;border-bottom:1px solid #e2e8f0;',
+        'padding:10px 12px;font:inherit;font-size:13px;outline:none;color:#0f172a;',
+        'background:#f8fafc;}',
+      '.nt-dial-picker-search:focus{background:#fff;}',
+      '.nt-dial-picker-list{overflow-y:auto;padding:4px 0;flex:1 1 auto;min-height:0;}',
+      '.nt-dial-picker-row{display:flex;justify-content:space-between;align-items:center;',
+        'padding:8px 12px;font-size:13px;color:#0f172a;cursor:pointer;gap:12px;}',
+      '.nt-dial-picker-row:hover,.nt-dial-picker-row.is-active{background:#f1f5f9;}',
+      '.nt-dial-picker-row.is-selected{background:#eff6ff;font-weight:600;}',
+      '.nt-dial-picker-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.nt-dial-picker-dial{color:#64748b;flex-shrink:0;}',
+      '.nt-dial-picker-empty{padding:14px;text-align:center;color:#94a3b8;font-size:13px;}'
+    ].join('');
+
+    function injectStyles() {
+      if (document.getElementById(STYLE_ID)) return;
+      var s = document.createElement('style');
+      s.id = STYLE_ID;
+      s.textContent = CSS;
+      document.head.appendChild(s);
+    }
+    function escHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function getList() {
+      return (global.NTIPLocation && global.NTIPLocation.getAllDialCodes)
+        ? global.NTIPLocation.getAllDialCodes() : [];
+    }
+    function getIpDial() {
+      return (global.NTIPLocation && global.NTIPLocation.getDialCode)
+        ? global.NTIPLocation.getDialCode() : null;
+    }
+    function findEntry(dial) {
+      var list = getList();
+      for (var i = 0; i < list.length; i++) if (list[i].dial === dial) return list[i];
+      return null;
+    }
+
+    function create(opts) {
+      opts = opts || {};
+      injectStyles();
+
+      var current = opts.selected || getIpDial() || '+91';
+      var currentEntry = findEntry(current);
+
+      var container = document.createElement('div');
+      container.className = 'nt-dial-picker';
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'nt-dial-picker-btn';
+      btn.setAttribute('aria-label', opts.ariaLabel || 'Country code');
+      btn.setAttribute('aria-haspopup', 'listbox');
+      btn.setAttribute('aria-expanded', 'false');
+
+      var btnVal = document.createElement('span');
+      btnVal.className = 'nt-dial-picker-val';
+      btnVal.textContent = current;
+
+      var caret = document.createElement('span');
+      caret.className = 'nt-dial-picker-caret';
+      caret.setAttribute('aria-hidden', 'true');
+      caret.textContent = '▾';
+
+      btn.appendChild(btnVal);
+      btn.appendChild(caret);
+      if (currentEntry) btn.title = currentEntry.name + ' (' + currentEntry.dial + ')';
+
+      var pop = document.createElement('div');
+      pop.className = 'nt-dial-picker-pop';
+      pop.setAttribute('role', 'dialog');
+      pop.hidden = true;
+
+      var search = document.createElement('input');
+      search.type = 'text';
+      search.className = 'nt-dial-picker-search';
+      search.placeholder = 'Search country or code…';
+      search.setAttribute('aria-label', 'Search country');
+      search.autocomplete = 'off';
+      search.autocapitalize = 'none';
+
+      var listEl = document.createElement('div');
+      listEl.className = 'nt-dial-picker-list';
+      listEl.setAttribute('role', 'listbox');
+
+      pop.appendChild(search);
+      pop.appendChild(listEl);
+      container.appendChild(btn);
+
+      var activeIdx = -1;
+      var rendered = [];
+
+      function renderList(filter) {
+        var q = (filter || '').toLowerCase().trim();
+        var qDial = q.replace(/^\+?/, '');
+        var list = getList();
+        rendered = q ? list.filter(function (c) {
+          return c.name.toLowerCase().indexOf(q) !== -1 ||
+                 c.iso.toLowerCase().indexOf(q) !== -1 ||
+                 c.dial.indexOf(qDial) !== -1;
+        }) : list;
+
+        var html = rendered.map(function (c) {
+          var sel = c.dial === current ? ' is-selected' : '';
+          return '<div class="nt-dial-picker-row' + sel + '" role="option"' +
+                 ' data-dial="' + escHtml(c.dial) + '" data-iso="' + escHtml(c.iso) + '">' +
+                   '<span class="nt-dial-picker-name">' + escHtml(c.name) + '</span>' +
+                   '<span class="nt-dial-picker-dial">' + escHtml(c.dial) + '</span>' +
+                 '</div>';
+        }).join('');
+        listEl.innerHTML = html || '<div class="nt-dial-picker-empty">No matches</div>';
+        activeIdx = rendered.length > 0 ? 0 : -1;
+        updateActive();
+        if (!filter) {
+          var selRow = listEl.querySelector('.nt-dial-picker-row.is-selected');
+          if (selRow && selRow.scrollIntoView) selRow.scrollIntoView({ block: 'nearest' });
+        }
+      }
+      function updateActive() {
+        var rows = listEl.querySelectorAll('.nt-dial-picker-row');
+        for (var i = 0; i < rows.length; i++) {
+          rows[i].classList.toggle('is-active', i === activeIdx);
+        }
+        if (activeIdx >= 0 && rows[activeIdx] && rows[activeIdx].scrollIntoView) {
+          rows[activeIdx].scrollIntoView({ block: 'nearest' });
+        }
+      }
+      function positionPop() {
+        var rect = btn.getBoundingClientRect();
+        var popW = 280;
+        var vw = window.innerWidth;
+        var left = Math.max(8, Math.min(rect.left, vw - popW - 8));
+        pop.style.left = left + 'px';
+        var spaceBelow = window.innerHeight - rect.bottom;
+        var popMaxH = 320;
+        if (spaceBelow < 220 && rect.top > spaceBelow) {
+          pop.style.top = '';
+          pop.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+        } else {
+          pop.style.bottom = '';
+          pop.style.top = (rect.bottom + 6) + 'px';
+        }
+        var availableH = pop.style.bottom
+          ? rect.top - 16
+          : (window.innerHeight - rect.bottom - 16);
+        pop.style.maxHeight = Math.max(180, Math.min(popMaxH, availableH)) + 'px';
+      }
+      function openPop() {
+        if (!pop.hidden) return;
+        if (!pop.parentNode) document.body.appendChild(pop);
+        pop.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        search.value = '';
+        renderList('');
+        positionPop();
+        setTimeout(function () { try { search.focus(); } catch (e) {} }, 0);
+        document.addEventListener('mousedown', onDocClick, true);
+        document.addEventListener('keydown',  onKeyDown);
+        window.addEventListener('resize',     positionPop);
+        window.addEventListener('scroll',     positionPop, true);
+      }
+      function closePop() {
+        if (pop.hidden) return;
+        pop.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('mousedown', onDocClick, true);
+        document.removeEventListener('keydown',  onKeyDown);
+        window.removeEventListener('resize',     positionPop);
+        window.removeEventListener('scroll',     positionPop, true);
+      }
+      function pick(entry) {
+        current = entry.dial;
+        btnVal.textContent = entry.dial;
+        btn.title = entry.name + ' (' + entry.dial + ')';
+        closePop();
+        if (typeof opts.onChange === 'function') {
+          try { opts.onChange(entry.dial, entry.iso, entry.name); } catch (e) {}
+        }
+      }
+      function onDocClick(e) {
+        if (container.contains(e.target) || pop.contains(e.target)) return;
+        closePop();
+      }
+      function onKeyDown(e) {
+        if (e.key === 'Escape') { e.preventDefault(); closePop(); btn.focus(); return; }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (rendered.length > 0) { activeIdx = (activeIdx + 1) % rendered.length; updateActive(); }
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (rendered.length > 0) { activeIdx = (activeIdx - 1 + rendered.length) % rendered.length; updateActive(); }
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (activeIdx >= 0 && rendered[activeIdx]) pick(rendered[activeIdx]);
+          return;
+        }
+      }
+
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        pop.hidden ? openPop() : closePop();
+      });
+      search.addEventListener('input', function () { renderList(search.value); });
+      listEl.addEventListener('click', function (e) {
+        var row = e.target.closest ? e.target.closest('.nt-dial-picker-row') : null;
+        if (!row) return;
+        var dial = row.getAttribute('data-dial');
+        var entry = findEntry(dial);
+        if (entry) pick(entry);
+      });
+
+      return {
+        element: container,
+        getValue: function () { return current; },
+        setValue: function (dial) {
+          var e = findEntry(dial);
+          if (e) {
+            current = e.dial;
+            btnVal.textContent = e.dial;
+            btn.title = e.name + ' (' + e.dial + ')';
+          }
+        },
+        dispose: function () {
+          closePop();
+          if (pop.parentNode) pop.parentNode.removeChild(pop);
+        }
+      };
+    }
+
+    global.NTDialPicker = { create: create };
+  })();
+
+  /* =================================================================== *
    *  Defaults
    * =================================================================== */
 
@@ -96,10 +528,129 @@
    *  Built-in fallback validators (used if config.validators absent)
    * =================================================================== */
 
-  // If libphonenumber-js is loaded on the page (window.libphonenumber, exposes
-  // isValidPhoneNumber + parsePhoneNumberFromString), the default phone
-  // validator uses it for country-aware length/prefix checks. Otherwise it
-  // falls back to a permissive 7–15 digit count.
+  // Per-country expected length (national significant number, no dial code).
+  // Compiled from libphonenumber's mobile rules — wide enough to admit valid
+  // mobile and landline lengths, tight enough to reject obvious garbage like
+  // an 8-digit Indian number. Unknown dial codes fall back to a generic
+  // 7–15 range. Order: by dial code numeric value.
+  var PHONE_LEN_BY_DIAL = {
+    '+1':   [10, 10],  // NANP (US, CA, ...)
+    '+7':   [10, 10],  // Russia, Kazakhstan
+    '+20':  [10, 10],  // Egypt
+    '+27':  [9, 9],    // South Africa
+    '+30':  [10, 10],  // Greece
+    '+31':  [9, 9],    // Netherlands
+    '+32':  [8, 9],    // Belgium
+    '+33':  [9, 9],    // France
+    '+34':  [9, 9],    // Spain
+    '+36':  [8, 9],    // Hungary
+    '+39':  [9, 11],   // Italy
+    '+40':  [9, 9],    // Romania
+    '+41':  [9, 9],    // Switzerland
+    '+43':  [10, 13],  // Austria (high variance)
+    '+44':  [9, 10],   // United Kingdom
+    '+45':  [8, 8],    // Denmark
+    '+46':  [7, 13],   // Sweden
+    '+47':  [8, 8],    // Norway
+    '+48':  [9, 9],    // Poland
+    '+49':  [10, 11],  // Germany
+    '+51':  [9, 9],    // Peru
+    '+52':  [10, 10],  // Mexico
+    '+54':  [10, 10],  // Argentina
+    '+55':  [10, 11],  // Brazil
+    '+56':  [9, 9],    // Chile
+    '+57':  [10, 10],  // Colombia
+    '+58':  [10, 10],  // Venezuela
+    '+60':  [9, 10],   // Malaysia
+    '+61':  [9, 9],    // Australia
+    '+62':  [9, 12],   // Indonesia
+    '+63':  [10, 10],  // Philippines
+    '+64':  [8, 10],   // New Zealand
+    '+65':  [8, 8],    // Singapore
+    '+66':  [9, 9],    // Thailand
+    '+81':  [10, 10],  // Japan
+    '+82':  [9, 10],   // South Korea
+    '+84':  [9, 10],   // Vietnam
+    '+86':  [11, 11],  // China
+    '+90':  [10, 10],  // Turkey
+    '+91':  [10, 10],  // India
+    '+92':  [10, 10],  // Pakistan
+    '+93':  [9, 9],    // Afghanistan
+    '+94':  [9, 9],    // Sri Lanka
+    '+98':  [10, 10],  // Iran
+    '+212': [9, 9],    // Morocco
+    '+213': [9, 9],    // Algeria
+    '+216': [8, 8],    // Tunisia
+    '+220': [7, 7],    // Gambia
+    '+221': [9, 9],    // Senegal
+    '+233': [9, 9],    // Ghana
+    '+234': [10, 10],  // Nigeria
+    '+250': [9, 9],    // Rwanda
+    '+251': [9, 9],    // Ethiopia
+    '+254': [9, 10],   // Kenya
+    '+255': [9, 9],    // Tanzania
+    '+256': [9, 9],    // Uganda
+    '+260': [9, 9],    // Zambia
+    '+263': [9, 9],    // Zimbabwe
+    '+351': [9, 9],    // Portugal
+    '+353': [9, 9],    // Ireland
+    '+354': [7, 7],    // Iceland
+    '+355': [9, 9],    // Albania
+    '+356': [8, 8],    // Malta
+    '+357': [8, 8],    // Cyprus
+    '+358': [6, 11],   // Finland
+    '+359': [9, 9],    // Bulgaria
+    '+370': [8, 8],    // Lithuania
+    '+371': [8, 8],    // Latvia
+    '+372': [7, 8],    // Estonia
+    '+380': [9, 9],    // Ukraine
+    '+385': [8, 9],    // Croatia
+    '+386': [8, 8],    // Slovenia
+    '+420': [9, 9],    // Czechia
+    '+421': [9, 9],    // Slovakia
+    '+501': [7, 7],    // Belize
+    '+502': [8, 8],    // Guatemala
+    '+503': [8, 8],    // El Salvador
+    '+504': [8, 8],    // Honduras
+    '+505': [8, 8],    // Nicaragua
+    '+506': [8, 8],    // Costa Rica
+    '+507': [7, 8],    // Panama
+    '+591': [8, 8],    // Bolivia
+    '+593': [8, 9],    // Ecuador
+    '+595': [9, 9],    // Paraguay
+    '+598': [8, 8],    // Uruguay
+    '+852': [8, 8],    // Hong Kong
+    '+853': [8, 8],    // Macao
+    '+855': [8, 9],    // Cambodia
+    '+856': [8, 10],   // Laos
+    '+880': [10, 10],  // Bangladesh
+    '+886': [9, 9],    // Taiwan
+    '+960': [7, 7],    // Maldives
+    '+961': [7, 8],    // Lebanon
+    '+962': [8, 9],    // Jordan
+    '+964': [10, 10],  // Iraq
+    '+965': [8, 8],    // Kuwait
+    '+966': [9, 9],    // Saudi Arabia
+    '+968': [8, 8],    // Oman
+    '+971': [8, 9],    // UAE
+    '+972': [8, 9],    // Israel
+    '+973': [8, 8],    // Bahrain
+    '+974': [8, 8],    // Qatar
+    '+975': [7, 8],    // Bhutan
+    '+976': [8, 8],    // Mongolia
+    '+977': [9, 10],   // Nepal
+    '+994': [9, 9],    // Azerbaijan
+    '+995': [9, 9],    // Georgia
+    '+998': [9, 9]     // Uzbekistan
+  };
+
+  // Default phone validation:
+  //   1. If libphonenumber-js is loaded (window.libphonenumber), defer to it
+  //      for the strictest possible country-aware rules (prefix checks too).
+  //   2. Otherwise enforce a per-country digit-length range from the table
+  //      above based on the dial code the user picked. Sites no longer need
+  //      to load libphonenumber-js separately for sensible validation.
+  //   3. Unknown dial codes fall through to a generic 7–15 digit count.
   var DEFAULT_VALIDATORS = {
     isValidPhoneDigits: function (input, dialCode) {
       var raw  = String(input || '').trim();
@@ -114,6 +665,8 @@
       }
 
       var digits = raw.replace(/\D/g, '');
+      var range = PHONE_LEN_BY_DIAL[dial];
+      if (range) return digits.length >= range[0] && digits.length <= range[1];
       return digits.length >= 7 && digits.length <= 15;
     },
     isValidEmail: function (input) {
@@ -243,10 +796,14 @@
     var cfg = mergeConfig(DEFAULTS, userCfg || {});
 
     // Snap adapters into local refs (cheap, also lets us swap to defaults).
+    // ipLocation / dialPicker fall back to the modules bundled at the top of
+    // this file (which also live on global.NTIPLocation / global.NTDialPicker),
+    // so a host that doesn't override them gets the built-in country-aware
+    // picker + IP-based dial-code prefill for free.
     var validators = cfg.validators || DEFAULT_VALIDATORS;
     var profile    = cfg.profile    || createLocalStorageProfile(cfg.storageKey + '_profile');
-    var ipLocation = cfg.ipLocation || null;
-    var dialPicker = cfg.dialPicker || null;
+    var ipLocation = cfg.ipLocation || global.NTIPLocation || null;
+    var dialPicker = cfg.dialPicker || global.NTDialPicker || null;
     var attribution= cfg.attribution|| null;
 
     var STEPS      = cfg.steps;

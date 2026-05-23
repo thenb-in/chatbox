@@ -17,6 +17,8 @@ Load directly from jsDelivr, pinned to a release tag:
 <script src="https://cdn.jsdelivr.net/gh/thenb-in/chatbox@v1.0.0/src/chatbox.js"></script>
 ```
 
+`chatbox.js` bundles the country dial-picker and the passive IP/geo lookup that used to live in sibling `dial-picker.js` and `ip-location.js` files — you no longer need separate `<script>` tags for those. The bundled versions still publish `window.NTDialPicker` and `window.NTIPLocation`, so consumers like `forms.js` keep working unchanged. If a host pre-loads the standalone files (or replaces the globals before `chatbox.js` runs), the bundled copies defer to those.
+
 Pin formats:
 - `@v1.0.0` — exact version (safest for prod)
 - `@v1`     — latest 1.x patch (auto-picks up `v1.0.1`, `v1.1.0`, …)
@@ -105,10 +107,14 @@ Chatbox.init({
     isValidEmail:       function (input) { ... }
   },
   ipLocation: {
+    // Optional — overrides the bundled IPLocation. Pass null/omit to use
+    // the built-in (window.NTIPLocation) which already does an IP lookup
+    // via ipwho.is / ipify and exposes getDialCode + getAllDialCodes.
     getDialCode: function () { return '+91'; }
   },
   dialPicker: {
-    // Render a custom country picker — returns an element + value getter
+    // Optional — overrides the bundled DialPicker. Pass null/omit to use
+    // the built-in searchable country popover (window.NTDialPicker).
     create: function ({ selected, ariaLabel }) {
       return { element: HTMLElement, getValue: function () { return '+91'; } };
     }
@@ -130,6 +136,8 @@ Chatbox.init({
 ```
 
 If no `profile` is given, a built-in `localStorage`-backed profile is used (namespaced from `storageKey`). All adapter methods are individually optional — missing methods become no-ops.
+
+`validators` defaults to a country-aware phone validator (per-dial-code length table covering the ~110 most common dial codes — e.g. `+91` strictly requires 10 digits, `+1` requires 10, `+86` requires 11) plus a standard email regex. If `window.libphonenumber` is loaded, the validator defers to libphonenumber-js for the strictest possible rules; otherwise it uses the bundled length table. Unknown dial codes fall back to a generic 7–15 digit range.
 
 ### Submitting leads
 

@@ -237,6 +237,92 @@ Each built-in step ID accepts the visitor's input and stores it under the matchi
 
 ---
 
+## Forms module
+
+`src/forms.js` is a separate, lightweight library for **regular HTML `<form>` elements** — not the chatbox widget. Attach a form, get phone + email validation, an optional country dial-code picker, and an optional "Sign in with Google" button — without each consuming site rewriting the wiring.
+
+It shares the chatbox's adapter philosophy: nothing is read from globals; everything is injected.
+
+### Install
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/thenb-in/chatbox@v1/src/forms.js"></script>
+```
+
+Exposes `window.Forms` (and `window.NTForms` as a legacy alias).
+
+### Configure once
+
+```js
+Forms.configure({
+  validators:   MyValidators,            // { isValidPhoneDigits, isValidEmail }
+  dialPicker:   MyDialPicker,            // { create({selected, ariaLabel}) -> picker }
+  ipLocation:   MyIPLocation,            // { getDialCode() -> '+91' }
+  googleSignIn: { clientId: '...' },     // omit/null disables Google entirely
+  profile:      MyProfile,               // { update(patch), get() } — optional
+  storageKeys:  ['nt_signed_up', 'nt_lead_captured'],  // override if needed
+  fieldWrapClass: 'nt-field',            // wrapper toggled for invalid state
+  invalidClass:   'is-invalid'
+});
+```
+
+`Forms.configure()` is idempotent — call once per page after your adapters load. You can also pass any of these per-attach as overrides.
+
+### Attach per form
+
+```js
+var f = Forms.attach(document.querySelector('#my-form'), {
+  phone:  '#phone-input',                // or { input, dialMount, picker: false }
+  email:  '#email-input',
+  name:   '#name-input',                 // optional; populated on Google sign-in
+  googleSignIn: true,                    // or { mount, text } / false to opt out
+  onGoogleSignIn: function (profile) { /* { email, name, email_verified } */ }
+});
+
+f.validate();         // -> boolean, applies invalid class on the wrapper
+f.getDialCode();      // -> '+91' (null if picker:false)
+f.setPhone('+91 98765 43210');
+f.getFullPhone();     // -> '+91 98765 43210'
+f.isGoogleVerified(); // -> { email, name } | null
+f.destroy();
+```
+
+### Google sign-in skip
+
+If a configured `storageKeys` flag is `'1'` (default: `nt_signed_up` / `nt_lead_captured`) AND the form's email field value matches the verified address stored in `profileStorageKey` (default: `nt_profile_v1`), `f.validate()` skips the strict email format check — Google has already verified that address. Phone validation always runs (Google doesn't provide one).
+
+### Google button visibility
+
+The "Sign in with Google" button is rendered iff:
+
+1. `googleSignIn.clientId` is set in `configure()` or `attach()` opts, **and**
+2. `attach()` was not called with `googleSignIn: false`, **and**
+3. The visitor isn't already verified (`isGoogleVerified()` returns null).
+
+No client ID configured = no button rendered. The library never talks to Google in that case.
+
+### Mount target
+
+By default the button gets injected as a small banner above the form fields. Override by either:
+
+- Putting an empty `<div data-nt-google-mount></div>` inside the form, or
+- Passing `googleSignIn: { mount: '#my-slot' }` to `attach()`.
+
+### Required HTML
+
+The library expects each field to live inside a wrapper element it can toggle for the invalid state. The default wrapper class is `nt-field`:
+
+```html
+<div class="nt-field">
+  <label for="phone">Phone</label>
+  <input id="phone" type="tel" name="phone">
+</div>
+```
+
+Override via `fieldWrapClass` / `invalidClass` in `configure()`.
+
+---
+
 ## License
 
 Proprietary — Copyright (c) 2026 Navlakha Technologies. All rights reserved.
